@@ -1,657 +1,724 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, Plus, Minus, Trash2, Utensils, Coffee, X, MapPin, Phone, User, Lock, ArrowRight, LogOut, GraduationCap, ShieldCheck, UserCircle, ChefHat } from 'lucide-react';
-
-// --- Data Mock Menu ---
-const MENU_ITEMS = [
-  {
-    id: 1,
-    name: "Nasi Goreng Spesial",
-    price: 18000,
-    category: "makanan",
-    image: "https://bing.com/th?id=OSK.05368722ca716fa5bdff5caa636e453f", // URL Gambar Nasi Goreng
-    desc: "Nasi goreng dengan telur, ayam suwir, dan kerupuk."
-  },
-  {
-    id: 2,
-    name: "Mie Ayam Bakso",
-    price: 15000,
-    category: "makanan",
-    image: "https://static.vecteezy.com/system/resources/previews/015/958/027/non_2x/mie-ayam-or-noodles-chicken-is-traditional-food-from-indonesia-asia-made-from-noodle-chicken-chicken-broth-spinach-sometimes-with-meatball-photo.jpg", // URL Gambar Mie Ayam Bakso yang sudah diperbarui
-    desc: "Mie ayam kenyal dengan topping ayam kecap dan bakso sapi."
-  },
-  {
-    id: 3,
-    name: "Ayam Geprek Sambal Bawang",
-    price: 20000,
-    category: "makanan",
-    image: "https://img-global.cpcdn.com/recipes/ae5a1335a284b9e9/680x482cq70/255-ayam-geprek-sambal-bawang-foto-resep-utama.jpg", // URL Gambar Ayam Geprek yang sudah diperbarui
-    desc: "Ayam goreng tepung crispy digeprek dengan sambal bawang pedas."
-  },
-  {
-    id: 4,
-    name: "Soto Ayam Lamongan",
-    price: 17000,
-    category: "makanan",
-    image: "https://images.unsplash.com/photo-1572656631137-7935297eff55?auto=format&fit=crop&q=100&w=1000",
-    desc: "Kuah kuning segar dengan koya gurih dan irisan ayam."
-  },
-  {
-    id: 5,
-    name: "Es Teh Manis Jumbo",
-    price: 5000,
-    category: "minuman",
-    image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&q=100&w=1000",
-    desc: "Teh manis dingin ukuran jumbo segar."
-  },
-  {
-    id: 6,
-    name: "Es Jeruk Peras",
-    price: 7000,
-    category: "minuman",
-    image: "https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&q=100&w=1000",
-    desc: "Jeruk peras murni dengan es batu."
-  },
-  {
-    id: 7,
-    name: "Kopi Susu Gula Aren",
-    price: 12000,
-    category: "minuman",
-    image: "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=100&w=1000",
-    desc: "Kopi susu kekinian dengan gula aren asli."
-  },
-  {
-    id: 8,
-    name: "Dimsum Ayam (4 pcs)",
-    price: 13000,
-    category: "makanan",
-    image: "https://cdn.idntimes.com/content-images/community/2021/12/265577571-2079294085561407-2876930124273163698-n-2-4e99c9153ffc58bc10ca9cd5bdccf58e-081fa7bb4af405ff72480b176fc0315b.jpg", // URL Gambar yang sudah diperbarui
-    desc: "Dimsum hangat dengan saus pedas manis."
-  },
-];
-
-// --- Komponen Utility ---
-const formatRupiah = (number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-  }).format(number);
-};
-
-// --- Komponen Logo Koki ---
-const ChefLogo = ({ className }) => (
-  <div className={`relative overflow-hidden rounded-full border-2 border-white shadow-md ${className}`}>
-    <img 
-      // URL Gambar logo koki yang telah diperbarui
-      src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiIZNm0p847w_vzBhFL27maZYPzhhrG0oIt9J-veBYqxKabDiO1k5VjChDKqTYdCE6soM-VFcUzJgUxMZqYwyo3jpU79PkX04ZIioF82kYDcRK9-ph6-dTXdIh1rwW5Od0WG_96oYj_lHfZ0bepe98XYdb-w5IkQZ964Xeq2Qve8lMG44-ZhaP3fd6dd1Q/s320/WhatsApp%20Image%202025-11-21%20at%2016.41.08.jpeg" 
-      alt="Logo Kantin Digital"
-      className="w-full h-full object-cover"
-      // Fallback jika gambar gagal dimuat, menampilkan placeholder text 'CHEF'
-      onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/320x320/FF6347/FFFFFF?text=CHEF" }}
-    />
-  </div>
-);
-
-export default function App() {
-  // State Login
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [loginRole, setLoginRole] = useState('siswa'); // 'siswa' | 'admin' | 'tamu'
-  const [loginError, setLoginError] = useState('');
-
-  // State App
-  const [cart, setCart] = useState([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSuccessMsg, setShowSuccessMsg] = useState(false);
-  
-  // --- NEW STATE: Untuk menampilkan bill order
-  const [isOrderConfirmed, setIsOrderConfirmed] = useState(false); 
-
-  // Gambar Background Kantin (High Resolution & Sharp)
-  const bgCanteenUrl = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=100&w=3000&auto=format&fit=crop"; 
-
-  // Logic Login
-  const handleLogin = (e) => {
-    e.preventDefault();
-    setLoginError('');
-
-    // Validasi dasar
-    if (!loginForm.username) {
-      setLoginError('Nama/Username wajib diisi!');
-      return;
-    }
-
-    // Validasi password (kecuali tamu)
-    if (loginRole !== 'tamu' && !loginForm.password) {
-      setLoginError('Password wajib diisi!');
-      return;
-    }
-
-    // Simulasi Login
-    setIsLoggedIn(true);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setCart([]); // Reset cart saat logout
-    setLoginForm({ username: '', password: '' });
-    setLoginRole('siswa'); // Reset role ke default
-    setIsOrderConfirmed(false); // Pastikan status order kembali ke false
-  };
-
-  // Logic Keranjang
-  const addToCart = (item) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === item.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [...prev, { ...item, quantity: 1 }];
-    });
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kantin Digital</title>
     
-    setShowSuccessMsg(true);
-    setTimeout(() => setShowSuccessMsg(false), 2000);
-  };
-
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((item) => item.id !== id));
-  };
-
-  const updateQuantity = (id, delta) => {
-    setCart((prev) => {
-      return prev.map((item) => {
-        if (item.id === id) {
-          const newQty = item.quantity + delta;
-          return newQty > 0 ? { ...item, quantity: newQty } : item;
+<script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Menggunakan font Inter */
+        body {
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
         }
-        return item;
-      });
-    });
-  };
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        /* Style untuk Background Image di Halaman Login */
+        .auth-background {
+            /* MENGGUNAKAN LINK GAMBAR YANG ANDA BERIKAN */
+            background-image: url('https://buguruku.com/wp-content/uploads/2023/02/2-1.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
 
-  // Logic Filter
-  const filteredItems = MENU_ITEMS.filter((item) => {
-    const matchCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchCategory && matchSearch;
-  });
+        /* Overlay untuk meningkatkan keterbacaan teks */
+        .auth-overlay {
+            background-color: rgba(0, 0, 0, 0.6); /* Overlay hitam transparan */
+        }
+        
+        /* Style untuk transisi kartu menu */
+        .menu-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .menu-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* Custom scrollbar for better look */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #9ca3af;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background-color: #e5e7eb;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    
+<div id="app-container" class="max-w-4xl mx-auto p-4 md:p-8">
+        
+        
+<header id="app-header" class="bg-white shadow-lg rounded-xl p-4 flex justify-between items-center mb-6 sticky top-0 z-10 hidden">
+            <h1 class="text-3xl font-bold text-indigo-700">KantinKita</h1>
+            <nav>
+                <button id="cart-button" class="relative p-2 bg-indigo-100 text-indigo-700 rounded-full hover:bg-indigo-200 transition duration-150">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 12.08a2 2 0 0 0 2 1.92h9.23a2 2 0 0 0 2-1.92L23 6H6"></path></svg>
+                    <span id="cart-count" class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">0</span>
+                </button>
+                <button id="logout-button" class="ml-4 px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-150">
+                    Keluar
+                </button>
+            </nav>
+        </header>
 
-  // --- UPDATED: Logic Checkout (menampilkan bill, bukan WhatsApp)
-  const handleCheckout = () => {
-    if (cart.length === 0) return;
-
-    // Langsung menampilkan bill order
-    setIsOrderConfirmed(true);
-    setIsCartOpen(false); // Tutup sidebar keranjang
-  };
-
-  // --- NEW: Logic untuk memulai pesanan baru dari bill order
-  const handleNewOrder = () => {
-    setCart([]); // Reset keranjang
-    setIsOrderConfirmed(false); // Kembali ke tampilan menu
-    setSearchQuery(''); // Reset pencarian
-    setSelectedCategory('all'); // Reset kategori
-  };
-
-  // --- TAMPILAN LOGIN ---
-  if (!isLoggedIn) {
-    return (
-      <div 
-        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-cover bg-center"
-        style={{ backgroundImage: `url(${bgCanteenUrl})` }}
-      >
-        {/* Overlay Gelap */}
-        <div className="absolute inset-0 bg-black/50"></div>
-
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 w-full max-w-md z-10 animate-fade-in-up transition-all border border-white/20">
-          <div className="text-center mb-6">
-            <div className="mx-auto mb-4 w-24 h-24 flex items-center justify-center">
-              {/* LOGO KOKI DI LOGIN */}
-              <ChefLogo className="w-24 h-24 shadow-lg shadow-red-600/30" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-800">Kantin Digital</h1>
-            <p className="text-gray-500 text-sm mt-1 font-medium">Kantinnya Anak Sekolah! Menu Enak, Harga Bersahabat 🚀</p>
-          </div>
-
-          {/* Role Selector Tabs */}
-          <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
-            <button
-              type="button"
-              onClick={() => { setLoginRole('siswa'); setLoginError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
-                loginRole === 'siswa' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <GraduationCap size={16} /> Siswa
-            </button>
-            <button
-              type="button"
-              onClick={() => { setLoginRole('admin'); setLoginError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
-                loginRole === 'admin' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <ShieldCheck size={16} /> Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => { setLoginRole('tamu'); setLoginError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
-                loginRole === 'tamu' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <UserCircle size={16} /> Tamu
-            </button>
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {loginRole === 'siswa' ? 'NIS / Nama Siswa' : loginRole === 'admin' ? 'Username Admin' : 'Nama Lengkap'}
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="text-gray-400" size={18} />
-                </div>
-                <input
-                  type="text"
-                  required
-                  className="pl-10 block w-full border-gray-300 rounded-lg border p-2.5 focus:ring-red-500 focus:border-red-500 transition-colors"
-                  placeholder={loginRole === 'tamu' ? "Masukkan nama Anda" : "Masukkan ID pengguna"}
-                  value={loginForm.username}
-                  onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
-                />
-              </div>
-            </div>
-
-            {/* Password Field - Hidden for Tamu */}
-            {loginRole !== 'tamu' && (
-              <div className="animate-fade-in-up">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="text-gray-400" size={18} />
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    className="pl-10 block w-full border-gray-300 rounded-lg border p-2.5 focus:ring-red-500 focus:border-red-500 transition-colors"
-                    placeholder="••••••••"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
-                  />
-                </div>
-              </div>
-            )}
-
-            {loginError && (
-              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2 animate-pulse">
-                <X size={16} /> {loginError}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 rounded-lg shadow-lg transform transition-all active:scale-95 flex items-center justify-center gap-2"
-            >
-              {loginRole === 'tamu' ? 'Masuk Sebagai Tamu' : 'Masuk Sekarang'} <ArrowRight size={18} />
-            </button>
-          </form>
-          
-          <div className="mt-6 text-center text-xs text-gray-500 font-medium">
-            &copy; 2023 Kantin Digital App by Anzilah Nurcahaya
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // --- TAMPILAN UTAMA (MENU & BILL) ---
-  return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
-      
-      {/* --- Header / Navbar --- */}
-      <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            {/* LOGO KOKI DI NAVBAR */}
-            <ChefLogo className="w-10 h-10 shadow-red-500/20" />
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 leading-none tracking-tight">Kantin Digital</h1>
-              <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                <span>Halo,</span>
-                <span className="font-bold text-red-600 max-w-[100px] truncate">{loginForm.username}</span>
-                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide text-gray-600 border border-gray-200">
-                  {loginRole}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={handleLogout}
-              className="p-2 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-full transition-colors"
-              title="Keluar"
-            >
-              <LogOut size={20} />
-            </button>
-            <button 
-              onClick={() => setIsCartOpen(true)}
-              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
-              <ShoppingCart size={24} className="text-gray-700" />
-              {totalItems > 0 && !isOrderConfirmed && ( // Sembunyikan notif keranjang setelah konfirmasi
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce shadow-sm">
-                  {totalItems}
-                </span>
-              )}
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* --- Hero Section dengan Background --- */}
-      {!isOrderConfirmed && ( // Sembunyikan hero saat bill muncul
-        <div 
-          className="relative bg-gray-900 text-white py-12 px-4 mb-8 overflow-hidden"
-        >
-          {/* Background Image & Overlay */}
-          <div 
-              className="absolute inset-0 bg-cover bg-center opacity-60" 
-              style={{ backgroundImage: `url(${bgCanteenUrl})` }}
-          ></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-red-900/80 to-black/40"></div>
-
-          <div className="relative max-w-5xl mx-auto z-10">
-            <h2 className="text-3xl md:text-4xl font-bold mb-2 drop-shadow-md">
-              {loginRole === 'admin' ? 'Selamat Datang Admin!' : 'Mau makan apa hari ini?'}
-            </h2>
-            <p className="opacity-100 mb-6 text-lg text-gray-100 max-w-2xl drop-shadow-md font-medium">
-              {loginRole === 'admin' 
-                ? 'Kelola pesanan dan menu kantin dengan mudah dan efisien.' 
-                : 'Nikmati hidangan lezat kantin sekolah, pesan langsung dari tempat dudukmu tanpa antri.'}
-            </p>
+        
+<main id="main-content">
             
-            {/* Search Bar */}
-            <div className="relative max-w-lg">
-              <input 
-                type="text" 
-                placeholder="Cari menu favoritmu..." 
-                className="w-full pl-10 pr-4 py-3.5 rounded-xl text-gray-800 focus:outline-none focus:ring-4 focus:ring-red-500/30 shadow-xl transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Search className="absolute left-3 top-4 text-gray-400" size={20} />
+</main>
+        
+        
+<div id="message-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center p-4 z-50">
+            <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 text-center transform transition-all duration-300 scale-95 opacity-0">
+                <h3 id="modal-title" class="text-xl font-bold mb-3 text-gray-800"></h3>
+                <p id="modal-body" class="text-gray-600 mb-6"></p>
+                <button id="modal-close-button" class="w-full px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-150">
+                    Tutup
+                </button>
             </div>
-          </div>
         </div>
-      )}
 
-      {/* --- Main Content: Menu or Order Confirmation --- */}
-      {isOrderConfirmed ? (
-        // --- TAMPILAN BILL ORDER/STRUK ---
-        <div className="max-w-2xl mx-auto px-4 pb-24 animate-fade-in-up">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 md:p-10">
-            <div className="text-center mb-8">
-              <ChefHat size={48} className="mx-auto text-red-600 mb-3" />
-              <h2 className="text-3xl font-extrabold text-gray-900">Pesanan Berhasil!</h2>
-              <p className="text-gray-500 mt-1">Pesanan Anda telah dikonfirmasi. Tunjukkan struk ini di kasir.</p>
-            </div>
-
-            <div className="border-t border-b border-dashed border-gray-300 py-4 mb-6">
-              <div className="flex justify-between text-sm text-gray-700 mb-1">
-                <span>Pelanggan</span>
-                <span className="font-semibold">{loginForm.username} ({loginRole})</span>
-              </div>
-              <div className="flex justify-between text-sm text-gray-700">
-                <span>No. Order</span>
-                <span className="font-semibold">#KD{Date.now().toString().slice(-6)}</span>
-              </div>
-            </div>
-
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Detail Pesanan</h3>
-            <ul className="space-y-3 mb-6">
-              {cart.map((item) => (
-                <li key={item.id} className="flex justify-between items-center text-gray-700 border-b border-gray-100 pb-2">
-                  <span className="text-sm">
-                    {item.name} <span className="text-red-500 font-medium">({item.quantity}x)</span>
-                  </span>
-                  <span className="font-semibold">{formatRupiah(item.price * item.quantity)}</span>
-                </li>
-              ))}
-            </ul>
-
-            <div className="border-t border-gray-200 pt-4">
-              <div className="flex justify-between items-center text-2xl font-extrabold text-gray-900">
-                <span>TOTAL BAYAR</span>
-                <span className="text-red-700">{formatRupiah(totalPrice)}</span>
-              </div>
-            </div>
-
-          </div>
-
-          <p className="text-center text-sm text-gray-500 mt-4 font-medium">
-            *Pesanan akan diproses setelah pembayaran di kasir.
-          </p>
-
-          <button
-            onClick={handleNewOrder}
-            className="w-full mt-6 bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors active:scale-95 shadow-lg flex items-center justify-center gap-2"
-          >
-            <ArrowRight size={20} /> Pesan Lagi (Buat Order Baru)
-          </button>
-        </div>
-      ) : (
-        // --- TAMPILAN MENU UTAMA (Original Main) ---
-        <main className="max-w-5xl mx-auto px-4 pb-24">
-          
-          {/* --- Kategori --- */}
-          <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
-            {[
-              { id: 'all', label: 'Semua', icon: <Utensils size={16} /> },
-              { id: 'makanan', label: 'Makanan', icon: <ChefHat size={16} /> },
-              { id: 'minuman', label: 'Minuman', icon: <Coffee size={16} /> },
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                // Menambahkan group class untuk hover styling pada ikon
-                className={`group flex items-center gap-2 px-6 py-2.5 rounded-full whitespace-nowrap transition-all font-medium text-sm ${
-                  selectedCategory === cat.id
-                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 transform scale-105'
-                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-red-50 hover:border-red-300'
-                }`}
-              >
-                {/* Conditional rendering of icon color based on selection */}
-                {React.cloneElement(cat.icon, { 
-                  className: selectedCategory === cat.id ? 'text-white' : 'text-gray-600 group-hover:text-red-600' 
-                })}
-                <span className="">{cat.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* --- Grid Menu --- */}
-          {filteredItems.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {filteredItems.map((item) => (
-                <div key={item.id} className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
-                  <div className="relative h-44 w-full bg-gray-200 overflow-hidden">
-                    <img 
-                      src={item.image} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                      // Fallback image for menu items
-                      onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/400x400/FF6347/FFFFFF?text=MENU" }}
-                    />
-                    <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1">
-                      {item.category === 'makanan' ? '🍔' : '🥤'}
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h3 className="font-bold text-gray-800 mb-1 line-clamp-1 text-base group-hover:text-red-600 transition-colors">{item.name}</h3>
-                    <p className="text-xs text-gray-500 mb-4 line-clamp-2 leading-relaxed">{item.desc}</p>
-                    
-                    <div className="mt-auto flex items-center justify-between">
-                      <span className="font-bold text-red-600 text-lg">{formatRupiah(item.price)}</span>
-                      <button 
-                        onClick={() => addToCart(item)}
-                        className="bg-red-50 text-red-600 p-2.5 rounded-xl hover:bg-red-600 hover:text-white active:scale-90 transition-all shadow-sm"
-                      >
-                        <Plus size={20} />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-24 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
-              <Utensils size={64} className="mx-auto mb-4 opacity-20" />
-              <p className="text-lg font-medium">Menu tidak ditemukan.</p>
-              <p className="text-sm">Coba cari dengan kata kunci lain.</p>
-            </div>
-          )}
-        </main>
-      )}
-
-      {/* --- Toast Notifikasi --- */}
-      {showSuccessMsg && (
-        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl z-50 text-sm flex items-center gap-3 animate-fade-in-up ring-1 ring-white/20">
-           <div className="bg-green-500 rounded-full p-0.5"><ShieldCheck size={14} className="text-white" /></div>
-          <span>Berhasil ditambahkan ke keranjang!</span>
-        </div>
-      )}
-
-      {/* --- Floating Action Button (Mobile) --- */}
-      <div className="fixed bottom-6 right-6 md:hidden z-30">
-        <button 
-          onClick={() => setIsCartOpen(true)}
-          className="bg-gradient-to-br from-red-600 to-red-700 text-white p-4 rounded-full shadow-2xl shadow-red-600/30 flex items-center justify-center relative active:scale-90 transition-transform"
-        >
-          <ShoppingCart size={24} />
-          {totalItems > 0 && !isOrderConfirmed && ( // Sembunyikan notif keranjang setelah konfirmasi
-            <span className="absolute -top-1 -right-1 bg-white text-red-600 text-xs font-extrabold w-6 h-6 flex items-center justify-center rounded-full border-2 border-red-600">
-              {totalItems}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* --- Cart Sidebar / Modal --- */}
-      {isCartOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-            onClick={() => setIsCartOpen(false)}
-          ></div>
-
-          {/* Sidebar Content */}
-          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
-              <h2 className="text-xl font-bold flex items-center gap-3">
-                <ShoppingCart className="text-red-600" size={24} />
-                Keranjang Pesanan
-              </h2>
-              <button 
-                onClick={() => setIsCartOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-800"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/50">
-              {cart.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-6">
-                  <div className="bg-white p-8 rounded-full shadow-sm border border-gray-100">
-                    <ShoppingCart size={64} className="opacity-30 text-gray-400" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-gray-600">Keranjang Kosong</p>
-                    <p className="text-sm mt-1">Kamu belum memilih menu apapun.</p>
-                  </div>
-                  <button 
-                    onClick={() => setIsCartOpen(false)}
-                    className="text-red-600 font-bold hover:underline hover:text-red-700 transition-colors"
-                  >
-                    Mulai Pesan Sekarang
-                  </button>
-                </div>
-              ) : (
-                cart.map((item) => (
-                  <div key={item.id} className="flex gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-                    <img 
-                      src={item.image} 
-                      alt={item.name} 
-                      className="w-20 h-20 rounded-xl object-cover"
-                      onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/80x80/FF6347/FFFFFF?text=MENU" }}
-                    />
-                    <div className="flex-1 flex flex-col justify-between py-0.5">
-                      <div>
-                        <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{item.name}</h4>
-                        <p className="text-red-600 font-bold text-sm mt-1">{formatRupiah(item.price)}</p>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-100">
-                          <button 
-                            onClick={() => updateQuantity(item.id, -1)}
-                            className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md shadow-sm transition-all text-gray-600"
-                          >
-                            <Minus size={14} />
-                          </button>
-                          <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                          <button 
-                            onClick={() => updateQuantity(item.id, 1)}
-                            className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md shadow-sm transition-all text-gray-600"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        </div>
-                        <button 
-                          onClick={() => removeFromCart(item.id)}
-                          className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Footer Cart */}
-            {cart.length > 0 && (
-              // UPDATED: Tombol Checkout
-              <div className="p-5 border-t border-gray-100 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-sm font-medium text-gray-600">Total Pesanan ({totalItems} item)</span>
-                  <span className="text-xl font-bold text-red-700">{formatRupiah(totalPrice)}</span>
+        
+<div id="cart-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center p-4 z-40">
+            <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 transform transition-all duration-300 scale-95 opacity-0">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h3 class="text-2xl font-bold text-indigo-700">Keranjang Belanja</h3>
+                    <button class="text-gray-400 hover:text-gray-600" onclick="closeCartModal()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
                 </div>
                 
-                <button
-                  onClick={handleCheckout}
-                  className="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors active:scale-95 shadow-lg flex items-center justify-center gap-2"
-                >
-                  <ShieldCheck size={20} /> Konfirmasi Pesanan
+                <div id="cart-items" class="max-h-80 overflow-y-auto custom-scrollbar mb-4">
+                    
+</div>
+                
+                
+<div id="recommendation-container" class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg hidden">
+                    <p class="text-sm font-semibold text-indigo-800 mb-2 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 16.5L16.5 12.5L12.5 8.5L8.5 12.5L12.5 16.5Z"/><path d="M18 12L22 12M2 12L6 12M12 2L12 6M12 18L12 22"/></svg>
+                        Rekomendasi Menu Cerdas
+                    </p>
+                    <p id="recommendation-text" class="text-gray-700 text-sm italic"></p>
+                    <div id="recommendation-loading" class="text-center text-sm text-indigo-700 hidden mt-2">Memuat rekomendasi...</div>
+                </div>
+
+                <button id="generate-recommendation-button" class="mt-4 w-full px-4 py-2 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-600 transition duration-150 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>
+                    Dapatkan Rekomendasi Tambahan ✨
                 </button>
-              </div>
-            )}
-          </div>
+                
+<div class="flex justify-between items-center border-t pt-4 mt-4">
+                    <p class="text-xl font-bold text-gray-800">Total:</p>
+                    <p id="cart-total" class="text-2xl font-extrabold text-green-600">Rp 0</p>
+                </div>
+
+                <button id="checkout-button" class="mt-6 w-full px-4 py-3 bg-green-500 text-white font-bold rounded-lg shadow-lg hover:bg-green-600 transition duration-150" disabled>
+                    Pesan Sekarang
+                </button>
+            </div>
         </div>
-      )}
     </div>
-  );
-}
+
+    <script>
+        // --- DATA SIMULASI ---
+        let currentUser = null;
+        let users = [];
+        let cart = [];
+
+        // Data Menu Kantin dengan URL gambar yang lebih menarik dan menggugah selera
+        const menuData = [
+            // Nasi Goreng Spesial - 
+            { id: 1, name: "Nasi Goreng Spesial", price: 20000, category: "Makanan Utama", canteen: "Kantin A", img: "https://th.bing.com/th/id/OSK.ad20e39826790ab31e2d013c670afd22?w=200&h=126&c=7&rs=1&qlt=80&o=6&cdv=1&dpr=1.5&pid=16.1" },
+            // Mie Ayam Bakso - 
+            { id: 2, name: "Mie Ayam Bakso", price: 18000, category: "Makanan Utama", canteen: "Kantin B", img: "https://placehold.co/400x300/067f00/ffffff?text=Mie+Ayam+%F0%9F%8D%9C" },
+            // Es Teh Manis - 
+            { id: 3, name: "Es Teh Manis", price: 5000, category: "Minuman", canteen: "Kantin A", img: "https://placehold.co/400x300/f8d700/1f2937?text=Es+Teh+%F0%9F%A5%A4" },
+            // Kentang Goreng - 
+            { id: 4, name: "Kentang Goreng", price: 12000, category: "Camilan", canteen: "Kantin C", img: "https://placehold.co/400x300/f0b441/1f2937?text=Kentang+Goreng+%F0%9F%8D%9F" },
+            // Ayam Geprek Sambal Matah - 
+            { id: 5, name: "Ayam Geprek Sambal Matah", price: 25000, category: "Makanan Utama", canteen: "Kantin C", img: "https://placehold.co/400x300/e2380e/ffffff?text=Ayam+Geprek+%F0%9F%8C%B6%EF%B8%8F" },
+            // Jus Alpukat - 
+            { id: 6, name: "Jus Alpukat", price: 15000, category: "Minuman", canteen: "Kantin B", img: "https://placehold.co/400x300/2a5c37/ffffff?text=Jus+Alpukat+%F0%9F%8D%83" },
+            // Puding Cokelat - 
+            { id: 7, name: "Puding Cokelat", price: 10000, category: "Hidangan Penutup", canteen: "Kantin A", img: "https://placehold.co/400x300/4e342e/ffffff?text=Puding+Cokelat+%F0%9F%8D%87" },
+            // Lemon Tea Dingin - 
+            { id: 8, name: "Lemon Tea Dingin", price: 7000, category: "Minuman", canteen: "Kantin B", img: "https://placehold.co/400x300/ffe082/1f2937?text=Lemon+Tea+%E2%98%85" },
+        ];
+
+        // --- GEMINI API CONFIGURATION ---
+        const apiKey = ""; // API Key akan disediakan oleh Canvas
+        const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent';
+
+        // --- UTILITIES (API Calls) ---
+        async function fetchWithRetry(url, options, retries = 3) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        // Jika bukan percobaan terakhir, coba lagi dengan exponential backoff
+                        if (i < retries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i)));
+                            continue;
+                        }
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    console.error(`Fetch attempt ${i + 1} failed:`, error);
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (2 ** i)));
+                }
+            }
+        }
+        
+        // --- UTILITIES (Penyimpanan Lokal) ---
+        function loadUsers() {
+            const storedUsers = localStorage.getItem('kantinUsers');
+            if (storedUsers) {
+                try {
+                    users = JSON.parse(storedUsers);
+                } catch (e) {
+                    console.error("Error parsing users from localStorage:", e);
+                    users = [];
+                }
+            }
+        }
+
+        function saveUsers() {
+            localStorage.setItem('kantinUsers', JSON.stringify(users));
+        }
+
+        function loadCart() {
+            const storedCart = localStorage.getItem('kantinCart');
+            if (storedCart) {
+                try {
+                    cart = JSON.parse(storedCart);
+                } catch (e) {
+                    console.error("Error parsing cart from localStorage:", e);
+                    cart = [];
+                }
+            }
+        }
+
+        function saveCart() {
+            localStorage.setItem('kantinCart', JSON.stringify(cart));
+            updateCartCount();
+        }
+
+        // --- FUNGSI TAMPILAN MODAL ---
+        const messageModal = document.getElementById('message-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseButton = document.getElementById('modal-close-button');
+
+        function showMessageModal(title, body, callback = null) {
+            modalTitle.textContent = title;
+            modalBody.textContent = body;
+            
+            // Tampilkan modal dengan transisi
+            messageModal.classList.remove('hidden');
+            messageModal.classList.add('flex');
+            setTimeout(() => {
+                messageModal.querySelector('div').classList.remove('opacity-0', 'scale-95');
+                messageModal.querySelector('div').classList.add('opacity-100', 'scale-100');
+            }, 10);
+
+            modalCloseButton.onclick = () => {
+                // Sembunyikan modal dengan transisi
+                messageModal.querySelector('div').classList.remove('opacity-100', 'scale-100');
+                messageModal.querySelector('div').classList.add('opacity-0', 'scale-95');
+                setTimeout(() => {
+                    messageModal.classList.add('hidden');
+                    messageModal.classList.remove('flex');
+                    if (callback) callback();
+                }, 300); // Tunggu transisi selesai
+            };
+        }
+
+        // --- FUNGSI OTENTIKASI ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = e.target.email.value.trim();
+            const password = e.target.password.value.trim();
+
+            const user = users.find(u => u.email === email && u.password === password);
+
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('kantinCurrentUser', JSON.stringify(user));
+                renderMenuPage();
+            } else {
+                showMessageModal("Gagal Login", "Email atau kata sandi salah. Silakan coba lagi.");
+            }
+        }
+
+        function handleRegister(e) {
+            e.preventDefault();
+            const email = e.target.email.value.trim();
+            const password = e.target.password.value.trim();
+            const name = e.target.name.value.trim();
+
+            if (users.find(u => u.email === email)) {
+                showMessageModal("Gagal Daftar", "Email sudah terdaftar. Silakan gunakan email lain atau login.");
+                return;
+            }
+
+            if (password.length < 6) {
+                showMessageModal("Gagal Daftar", "Kata sandi harus minimal 6 karakter.");
+                return;
+            }
+
+            const newUser = { id: Date.now(), name, email, password };
+            users.push(newUser);
+            saveUsers();
+            
+            showMessageModal("Berhasil Daftar", "Akun berhasil dibuat! Silakan login.", () => {
+                renderLoginPage();
+            });
+        }
+        
+        // FUNGSI BARU: Masuk sebagai Tamu
+        function handleGuestLogin() {
+            currentUser = { id: crypto.randomUUID(), name: 'Tamu Kantin', email: 'guest@kantin.com' };
+            localStorage.setItem('kantinCurrentUser', JSON.stringify(currentUser));
+            showMessageModal("Selamat Datang!", "Anda masuk sebagai Tamu. Selamat berbelanja!", () => {
+                renderMenuPage();
+            });
+        }
+
+        function handleLogout() {
+            currentUser = null;
+            cart = [];
+            localStorage.removeItem('kantinCurrentUser');
+            localStorage.removeItem('kantinCart');
+            updateCartCount();
+            renderLoginPage();
+        }
+
+        // --- RENDERING HALAMAN ---
+        
+        // Fungsi untuk mengatur tampilan halaman (Auth vs Menu)
+        function setAppLayout(isAuthPage) {
+            const appContainer = document.getElementById('app-container');
+            const body = document.body;
+            
+            if (isAuthPage) {
+                // Terapkan gaya latar belakang dan pusat layar
+                body.classList.add('auth-background', 'auth-overlay');
+                body.classList.remove('bg-gray-50');
+                
+                appContainer.classList.remove('max-w-4xl', 'mx-auto', 'p-4', 'md:p-8');
+                appContainer.classList.add('flex', 'items-center', 'justify-center', 'min-h-screen', 'w-full');
+            } else {
+                // Terapkan gaya menu
+                body.classList.remove('auth-background', 'auth-overlay');
+                body.classList.add('bg-gray-50');
+                
+                appContainer.classList.add('max-w-4xl', 'mx-auto', 'p-4', 'md:p-8');
+                appContainer.classList.remove('flex', 'items-center', 'justify-center', 'min-h-screen', 'w-full');
+            }
+        }
+
+
+        // 1. Halaman Login
+        function renderLoginPage() {
+            setAppLayout(true);
+            document.getElementById('app-header').classList.add('hidden');
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="bg-white p-8 md:p-10 rounded-xl shadow-2xl max-w-md w-full transition duration-500 ease-in-out">
+                    <!-- Tambahkan Logo di sini -->
+                    <div class="flex justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                    </div>
+                    
+                    <h2 class="text-3xl font-extrabold text-center text-indigo-800 mb-6">Selamat Datang di KantinKita</h2>
+                    <form id="login-form" class="space-y-4">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Pelanggan</label>
+                            <input type="email" id="login-email" name="email" required placeholder="email@contoh.com"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Kata Sandi</label>
+                            <input type="password" id="login-password" name="password" required placeholder="Minimal 6 karakter"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition duration-200 mt-6">
+                            Masuk
+                        </button>
+                    </form>
+                    
+                    
+<div class="mt-4 flex items-center">
+                        <hr class="flex-grow border-gray-300">
+                        <span class="px-2 text-sm text-gray-500">ATAU</span>
+                        <hr class="flex-grow border-gray-300">
+                    </div>
+                    
+                    <button id="guest-login-button" class="w-full py-3 mt-4 border border-indigo-600 text-indigo-600 font-bold rounded-lg hover:bg-indigo-50 transition duration-200 shadow-sm">
+                        Masuk sebagai Tamu
+                    </button>
+
+                    <p class="mt-6 text-center text-sm text-gray-600">
+                        Belum punya akun? 
+                        <a href="#" id="to-register-link" class="font-semibold text-indigo-600 hover:text-indigo-800 transition duration-150">Daftar Sekarang</a>
+                    </p>
+                </div>
+            `;
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('to-register-link').addEventListener('click', (e) => { e.preventDefault(); renderRegisterPage(); });
+            document.getElementById('guest-login-button').addEventListener('click', handleGuestLogin);
+        }
+
+        // 2. Halaman Register
+        function renderRegisterPage() {
+            setAppLayout(true);
+            document.getElementById('app-header').classList.add('hidden');
+            const content = document.getElementById('main-content');
+            content.innerHTML = `
+                <div class="bg-white p-8 md:p-10 rounded-xl shadow-2xl max-w-md w-full transition duration-500 ease-in-out">
+                    <!-- Tambahkan Logo di sini -->
+                    <div class="flex justify-center mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-center text-indigo-800 mb-6">Daftar Akun Baru</h2>
+                    <form id="register-form" class="space-y-4">
+                        <div>
+                            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                            <input type="text" id="register-name" name="name" required placeholder="Nama Anda"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                            <input type="email" id="register-email" name="email" required placeholder="email@contoh.com"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Kata Sandi</label>
+                            <input type="password" id="register-password" name="password" required placeholder="Minimal 6 karakter"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150">
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-green-500 text-white font-bold rounded-lg shadow-md hover:bg-green-600 transition duration-200 mt-6">
+                            Daftar
+                        </button>
+                    </form>
+                    <p class="mt-6 text-center text-sm text-gray-600">
+                        Sudah punya akun? 
+                        <a href="#" id="to-login-link" class="font-semibold text-indigo-600 hover:text-indigo-800 transition duration-150">Masuk</a>
+                    </p>
+                </div>
+            `;
+            document.getElementById('register-form').addEventListener('submit', handleRegister);
+            document.getElementById('to-login-link').addEventListener('click', (e) => { e.preventDefault(); renderLoginPage(); });
+        }
+
+        // 3. Halaman Menu Utama
+        function renderMenuPage() {
+            if (!currentUser) {
+                renderLoginPage();
+                return;
+            }
+
+            setAppLayout(false); // Atur layout ke mode Menu
+            document.getElementById('app-header').classList.remove('hidden');
+            const content = document.getElementById('main-content');
+
+            // Konten Sapaan dan Pencarian
+            let html = `
+                <div class="bg-indigo-600 text-white p-6 rounded-xl shadow-lg mb-6">
+                    <p class="text-lg">Selamat datang, <span class="font-bold">${currentUser.name}</span>!</p>
+                    <h2 class="text-3xl font-extrabold mt-1">Mau pesan apa hari ini?</h2>
+                </div>
+                
+                <div class="mb-6 p-4 bg-white rounded-xl shadow-md flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-gray-400 mr-3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="search-input" placeholder="Cari makanan, minuman, atau kantin..." 
+                        class="w-full bg-transparent text-lg focus:outline-none placeholder-gray-400">
+                </div>
+
+                <h3 class="text-2xl font-bold text-gray-700 mb-4">Daftar Menu Lengkap</h3>
+                <div id="menu-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    
+</div>
+            `;
+            content.innerHTML = html;
+
+            document.getElementById('search-input').addEventListener('input', (e) => renderMenuItems(e.target.value));
+            
+            // Render menu awal
+            renderMenuItems();
+        }
+
+        function renderMenuItems(searchTerm = '') {
+            const menuList = document.getElementById('menu-list');
+            menuList.innerHTML = '';
+            
+            const filteredMenu = menuData.filter(item => 
+                item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.canteen.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.category.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            if (filteredMenu.length === 0) {
+                menuList.innerHTML = `<p class="col-span-3 text-center text-gray-500 py-12 text-lg">Tidak ada menu yang ditemukan untuk "${searchTerm}".</p>`;
+                return;
+            }
+
+            filteredMenu.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'menu-card bg-white rounded-xl shadow-md overflow-hidden transition duration-300 border border-gray-100 hover:border-indigo-300';
+                card.innerHTML = `
+                    <img src="${item.img}" onerror="this.onerror=null;this.src='https://placehold.co/400x300/4f46e5/ffffff?text=Kantin'" 
+                         alt="Gambar ${item.name}" class="w-full h-32 object-cover">
+                    <div class="p-4">
+                        <span class="text-xs font-medium text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">${item.category}</span>
+                        <h4 class="text-xl font-semibold text-gray-900 mt-1 mb-1">${item.name}</h4>
+                        <p class="text-sm text-gray-500 mb-2">Kantin: ${item.canteen}</p>
+                        <p class="text-2xl font-bold text-green-600 mb-3">Rp ${item.price.toLocaleString('id-ID')}</p>
+                        <button onclick="addToCart(${item.id})"
+                                class="w-full flex items-center justify-center py-2 bg-indigo-500 text-white font-medium rounded-lg hover:bg-indigo-600 transition duration-150 shadow-md">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Tambah
+                        </button>
+                    </div>
+                `;
+                menuList.appendChild(card);
+            });
+        }
+
+        // --- FUNGSI KERANJANG ---
+        
+        function addToCart(menuId) {
+            const item = menuData.find(m => m.id === menuId);
+            if (!item) return;
+
+            const existingItem = cart.find(c => c.id === menuId);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...item, quantity: 1 });
+            }
+            saveCart();
+            showMessageModal("Berhasil!", `${item.name} telah ditambahkan ke keranjang.`);
+        }
+
+        function updateCartCount() {
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cart-count').textContent = count;
+        }
+
+        function calculateCartTotal() {
+            return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        }
+
+        // Render isi keranjang di modal
+        function renderCartItems() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartTotalElement = document.getElementById('cart-total');
+            const checkoutButton = document.getElementById('checkout-button');
+            const recContainer = document.getElementById('recommendation-container');
+            const recText = document.getElementById('recommendation-text');
+            const recLoading = document.getElementById('recommendation-loading');
+            const recButton = document.getElementById('generate-recommendation-button');
+            
+            // Sembunyikan rekomendasi dan reset teks saat modal dibuka/di-render ulang
+            recText.textContent = '';
+            recContainer.classList.add('hidden');
+            recButton.disabled = false;
+
+
+            cartItemsContainer.innerHTML = '';
+
+            if (cart.length === 0) {
+                cartItemsContainer.innerHTML = `
+                    <div class="text-center py-10 text-gray-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-3 text-indigo-400"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 12.08a2 2 0 0 0 2 1.92h9.23a2 2 0 0 0 2-1.92L23 6H6"></path></svg>
+                        <p class="text-lg font-semibold">Keranjang Anda kosong.</p>
+                        <p class="text-sm">Mari tambahkan beberapa menu lezat!</p>
+                    </div>
+                `;
+                cartTotalElement.textContent = 'Rp 0';
+                checkoutButton.disabled = true;
+                recButton.disabled = true;
+                return;
+            }
+
+            let total = 0;
+            cart.forEach(item => {
+                total += item.price * item.quantity;
+                const itemElement = document.createElement('div');
+                itemElement.className = 'flex items-center justify-between border-b last:border-b-0 py-3';
+                itemElement.innerHTML = `
+                    <div class="flex-grow">
+                        <h4 class="font-semibold text-gray-800">${item.name}</h4>
+                        <p class="text-sm text-gray-500">${item.canteen} &bull; Rp ${item.price.toLocaleString('id-ID')}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="changeQuantity(${item.id}, -1)" class="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 text-gray-700 transition duration-150">-</button>
+                        <span class="font-bold text-gray-800 w-6 text-center">${item.quantity}</span>
+                        <button onclick="changeQuantity(${item.id}, 1)" class="w-8 h-8 flex items-center justify-center bg-indigo-500 rounded-full hover:bg-indigo-600 text-white transition duration-150">+</button>
+                    </div>
+                    <div class="ml-4 w-20 text-right">
+                        <p class="font-bold text-indigo-600">Rp ${(item.price * item.quantity).toLocaleString('id-ID')}</p>
+                    </div>
+                `;
+                cartItemsContainer.appendChild(itemElement);
+            });
+            
+            cartTotalElement.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+            checkoutButton.disabled = false;
+        }
+
+        function changeQuantity(menuId, delta) {
+            const itemIndex = cart.findIndex(c => c.id === menuId);
+
+            if (itemIndex > -1) {
+                cart[itemIndex].quantity += delta;
+
+                if (cart[itemIndex].quantity <= 0) {
+                    cart.splice(itemIndex, 1); // Hapus jika kuantitas <= 0
+                }
+                saveCart();
+                renderCartItems(); // Perbarui tampilan keranjang
+            }
+        }
+
+        function showCartModal() {
+            renderCartItems();
+            const cartModal = document.getElementById('cart-modal');
+            cartModal.classList.remove('hidden');
+            cartModal.classList.add('flex');
+            setTimeout(() => {
+                cartModal.querySelector('div').classList.remove('opacity-0', 'scale-95');
+                cartModal.querySelector('div').classList.add('opacity-100', 'scale-100');
+            }, 10);
+        }
+
+        function closeCartModal() {
+            const cartModal = document.getElementById('cart-modal');
+            cartModal.querySelector('div').classList.remove('opacity-100', 'scale-100');
+            cartModal.querySelector('div').classList.add('opacity-0', 'scale-95');
+            setTimeout(() => {
+                cartModal.classList.add('hidden');
+                cartModal.classList.remove('flex');
+            }, 300);
+        }
+        
+        function handleCheckout() {
+            if (cart.length === 0) return;
+
+            const total = calculateCartTotal();
+            const orderDetails = cart.map(item => `${item.name} (${item.quantity}x) - Kantin ${item.canteen}`).join(', ');
+
+            showMessageModal(
+                "Pesanan Diterima!",
+                `Total pembayaran: Rp ${total.toLocaleString('id-ID')}. Pesanan: ${orderDetails}. Harap tunggu pesanan Anda disiapkan.`,
+                () => {
+                    // Reset keranjang setelah checkout
+                    cart = [];
+                    saveCart();
+                    closeCartModal();
+                }
+            );
+        }
+
+        // --- FUNGSI GEMINI: REKOMENDASI MENU ---
+        async function generateRecommendation() {
+            if (cart.length === 0) {
+                showMessageModal("Oops!", "Keranjang belanja Anda masih kosong. Isi dulu untuk mendapatkan rekomendasi!");
+                return;
+            }
+
+            const recContainer = document.getElementById('recommendation-container');
+            const recText = document.getElementById('recommendation-text');
+            const recLoading = document.getElementById('recommendation-loading');
+            const recButton = document.getElementById('generate-recommendation-button');
+
+            recText.textContent = '';
+            recContainer.classList.add('hidden');
+            recLoading.classList.remove('hidden');
+            recButton.disabled = true;
+
+            const cartSummary = cart.map(item => `${item.name} (${item.quantity}x, Kantin ${item.canteen})`).join(', ');
+            const cartTotal = calculateCartTotal().toLocaleString('id-ID');
+
+            const systemPrompt = "Anda adalah asisten AI yang merekomendasikan menu makanan dan minuman pendamping di kantin. Berikan rekomendasi singkat dan menarik (maksimal 2 kalimat) berdasarkan item yang sudah ada di keranjang. Jangan merekomendasikan item yang sudah ada di keranjang (yaitu, jangan merekomendasikan: Nasi Goreng Spesial, Mie Ayam Bakso, Es Teh Manis, Kentang Goreng, Ayam Geprek Sambal Matah, Jus Alpukat, Puding Cokelat, Lemon Tea Dingin). Fokus pada hidangan penutup, minuman segar, atau lauk pendamping. Jawab dalam Bahasa Indonesia.";
+
+            const userQuery = `Item saat ini di keranjang: ${cartSummary}. Total harga: Rp ${cartTotal}. Berikan rekomendasi satu item tambahan yang cocok!`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            const options = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            };
+
+            try {
+                const result = await fetchWithRetry(apiUrl, options);
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text || "Maaf, kami kesulitan menemukan rekomendasi saat ini.";
+
+                recText.textContent = text;
+                recContainer.classList.remove('hidden');
+                
+            } catch (error) {
+                recText.textContent = "Terjadi kesalahan saat memuat rekomendasi AI. Silakan coba lagi.";
+                recContainer.classList.remove('hidden');
+                console.error("Gemini API Error:", error);
+            } finally {
+                recLoading.classList.add('hidden');
+                recButton.disabled = false;
+            }
+        }
+
+
+        // --- INISIALISASI ---
+        function initializeApp() {
+            loadUsers();
+            loadCart();
+
+            // Cek apakah ada user yang sedang login
+            const storedUser = localStorage.getItem('kantinCurrentUser');
+            if (storedUser) {
+                try {
+                    currentUser = JSON.parse(storedUser);
+                    renderMenuPage();
+                } catch (e) {
+                    console.error("Error parsing currentUser from localStorage:", e);
+                    renderLoginPage();
+                }
+            } else {
+                renderLoginPage();
+            }
+
+            // Tambahkan event listener global
+            document.getElementById('logout-button').addEventListener('click', handleLogout);
+            document.getElementById('cart-button').addEventListener('click', showCartModal);
+            document.getElementById('checkout-button').addEventListener('click', handleCheckout);
+            // Binding untuk fitur Gemini
+            document.getElementById('generate-recommendation-button').addEventListener('click', generateRecommendation);
+        }
+
+        // Jalankan aplikasi setelah DOM dimuat
+        document.addEventListener('DOMContentLoaded', initializeApp);
+        
+    </script>
+</body>
+</html>
