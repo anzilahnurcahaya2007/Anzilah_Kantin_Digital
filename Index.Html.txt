@@ -1,0 +1,657 @@
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Search, Plus, Minus, Trash2, Utensils, Coffee, X, MapPin, Phone, User, Lock, ArrowRight, LogOut, GraduationCap, ShieldCheck, UserCircle, ChefHat } from 'lucide-react';
+
+// --- Data Mock Menu ---
+const MENU_ITEMS = [
+  {
+    id: 1,
+    name: "Nasi Goreng Spesial",
+    price: 18000,
+    category: "makanan",
+    image: "https://bing.com/th?id=OSK.05368722ca716fa5bdff5caa636e453f", // URL Gambar Nasi Goreng
+    desc: "Nasi goreng dengan telur, ayam suwir, dan kerupuk."
+  },
+  {
+    id: 2,
+    name: "Mie Ayam Bakso",
+    price: 15000,
+    category: "makanan",
+    image: "https://static.vecteezy.com/system/resources/previews/015/958/027/non_2x/mie-ayam-or-noodles-chicken-is-traditional-food-from-indonesia-asia-made-from-noodle-chicken-chicken-broth-spinach-sometimes-with-meatball-photo.jpg", // URL Gambar Mie Ayam Bakso yang sudah diperbarui
+    desc: "Mie ayam kenyal dengan topping ayam kecap dan bakso sapi."
+  },
+  {
+    id: 3,
+    name: "Ayam Geprek Sambal Bawang",
+    price: 20000,
+    category: "makanan",
+    image: "https://img-global.cpcdn.com/recipes/ae5a1335a284b9e9/680x482cq70/255-ayam-geprek-sambal-bawang-foto-resep-utama.jpg", // URL Gambar Ayam Geprek yang sudah diperbarui
+    desc: "Ayam goreng tepung crispy digeprek dengan sambal bawang pedas."
+  },
+  {
+    id: 4,
+    name: "Soto Ayam Lamongan",
+    price: 17000,
+    category: "makanan",
+    image: "https://images.unsplash.com/photo-1572656631137-7935297eff55?auto=format&fit=crop&q=100&w=1000",
+    desc: "Kuah kuning segar dengan koya gurih dan irisan ayam."
+  },
+  {
+    id: 5,
+    name: "Es Teh Manis Jumbo",
+    price: 5000,
+    category: "minuman",
+    image: "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&q=100&w=1000",
+    desc: "Teh manis dingin ukuran jumbo segar."
+  },
+  {
+    id: 6,
+    name: "Es Jeruk Peras",
+    price: 7000,
+    category: "minuman",
+    image: "https://images.unsplash.com/photo-1613478223719-2ab802602423?auto=format&fit=crop&q=100&w=1000",
+    desc: "Jeruk peras murni dengan es batu."
+  },
+  {
+    id: 7,
+    name: "Kopi Susu Gula Aren",
+    price: 12000,
+    category: "minuman",
+    image: "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=100&w=1000",
+    desc: "Kopi susu kekinian dengan gula aren asli."
+  },
+  {
+    id: 8,
+    name: "Dimsum Ayam (4 pcs)",
+    price: 13000,
+    category: "makanan",
+    image: "https://cdn.idntimes.com/content-images/community/2021/12/265577571-2079294085561407-2876930124273163698-n-2-4e99c9153ffc58bc10ca9cd5bdccf58e-081fa7bb4af405ff72480b176fc0315b.jpg", // URL Gambar yang sudah diperbarui
+    desc: "Dimsum hangat dengan saus pedas manis."
+  },
+];
+
+// --- Komponen Utility ---
+const formatRupiah = (number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(number);
+};
+
+// --- Komponen Logo Koki ---
+const ChefLogo = ({ className }) => (
+  <div className={`relative overflow-hidden rounded-full border-2 border-white shadow-md ${className}`}>
+    <img 
+      // URL Gambar logo koki yang telah diperbarui
+      src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiIZNm0p847w_vzBhFL27maZYPzhhrG0oIt9J-veBYqxKabDiO1k5VjChDKqTYdCE6soM-VFcUzJgUxMZqYwyo3jpU79PkX04ZIioF82kYDcRK9-ph6-dTXdIh1rwW5Od0WG_96oYj_lHfZ0bepe98XYdb-w5IkQZ964Xeq2Qve8lMG44-ZhaP3fd6dd1Q/s320/WhatsApp%20Image%202025-11-21%20at%2016.41.08.jpeg" 
+      alt="Logo Kantin Digital"
+      className="w-full h-full object-cover"
+      // Fallback jika gambar gagal dimuat, menampilkan placeholder text 'CHEF'
+      onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/320x320/FF6347/FFFFFF?text=CHEF" }}
+    />
+  </div>
+);
+
+export default function App() {
+  // State Login
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [loginRole, setLoginRole] = useState('siswa'); // 'siswa' | 'admin' | 'tamu'
+  const [loginError, setLoginError] = useState('');
+
+  // State App
+  const [cart, setCart] = useState([]);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuccessMsg, setShowSuccessMsg] = useState(false);
+  
+  // --- NEW STATE: Untuk menampilkan bill order
+  const [isOrderConfirmed, setIsOrderConfirmed] = useState(false); 
+
+  // Gambar Background Kantin (High Resolution & Sharp)
+  const bgCanteenUrl = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=100&w=3000&auto=format&fit=crop"; 
+
+  // Logic Login
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setLoginError('');
+
+    // Validasi dasar
+    if (!loginForm.username) {
+      setLoginError('Nama/Username wajib diisi!');
+      return;
+    }
+
+    // Validasi password (kecuali tamu)
+    if (loginRole !== 'tamu' && !loginForm.password) {
+      setLoginError('Password wajib diisi!');
+      return;
+    }
+
+    // Simulasi Login
+    setIsLoggedIn(true);
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setCart([]); // Reset cart saat logout
+    setLoginForm({ username: '', password: '' });
+    setLoginRole('siswa'); // Reset role ke default
+    setIsOrderConfirmed(false); // Pastikan status order kembali ke false
+  };
+
+  // Logic Keranjang
+  const addToCart = (item) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === item.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+        );
+      }
+      return [...prev, { ...item, quantity: 1 }];
+    });
+    
+    setShowSuccessMsg(true);
+    setTimeout(() => setShowSuccessMsg(false), 2000);
+  };
+
+  const removeFromCart = (id) => {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const updateQuantity = (id, delta) => {
+    setCart((prev) => {
+      return prev.map((item) => {
+        if (item.id === id) {
+          const newQty = item.quantity + delta;
+          return newQty > 0 ? { ...item, quantity: newQty } : item;
+        }
+        return item;
+      });
+    });
+  };
+
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+  // Logic Filter
+  const filteredItems = MENU_ITEMS.filter((item) => {
+    const matchCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCategory && matchSearch;
+  });
+
+  // --- UPDATED: Logic Checkout (menampilkan bill, bukan WhatsApp)
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+
+    // Langsung menampilkan bill order
+    setIsOrderConfirmed(true);
+    setIsCartOpen(false); // Tutup sidebar keranjang
+  };
+
+  // --- NEW: Logic untuk memulai pesanan baru dari bill order
+  const handleNewOrder = () => {
+    setCart([]); // Reset keranjang
+    setIsOrderConfirmed(false); // Kembali ke tampilan menu
+    setSearchQuery(''); // Reset pencarian
+    setSelectedCategory('all'); // Reset kategori
+  };
+
+  // --- TAMPILAN LOGIN ---
+  if (!isLoggedIn) {
+    return (
+      <div 
+        className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-cover bg-center"
+        style={{ backgroundImage: `url(${bgCanteenUrl})` }}
+      >
+        {/* Overlay Gelap */}
+        <div className="absolute inset-0 bg-black/50"></div>
+
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl p-8 w-full max-w-md z-10 animate-fade-in-up transition-all border border-white/20">
+          <div className="text-center mb-6">
+            <div className="mx-auto mb-4 w-24 h-24 flex items-center justify-center">
+              {/* LOGO KOKI DI LOGIN */}
+              <ChefLogo className="w-24 h-24 shadow-lg shadow-red-600/30" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-800">Kantin Digital</h1>
+            <p className="text-gray-500 text-sm mt-1 font-medium">Kantinnya Anak Sekolah! Menu Enak, Harga Bersahabat 🚀</p>
+          </div>
+
+          {/* Role Selector Tabs */}
+          <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+            <button
+              type="button"
+              onClick={() => { setLoginRole('siswa'); setLoginError(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
+                loginRole === 'siswa' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <GraduationCap size={16} /> Siswa
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginRole('admin'); setLoginError(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
+                loginRole === 'admin' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <ShieldCheck size={16} /> Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginRole('tamu'); setLoginError(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all ${
+                loginRole === 'tamu' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <UserCircle size={16} /> Tamu
+            </button>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {loginRole === 'siswa' ? 'NIS / Nama Siswa' : loginRole === 'admin' ? 'Username Admin' : 'Nama Lengkap'}
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="text-gray-400" size={18} />
+                </div>
+                <input
+                  type="text"
+                  required
+                  className="pl-10 block w-full border-gray-300 rounded-lg border p-2.5 focus:ring-red-500 focus:border-red-500 transition-colors"
+                  placeholder={loginRole === 'tamu' ? "Masukkan nama Anda" : "Masukkan ID pengguna"}
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
+                />
+              </div>
+            </div>
+
+            {/* Password Field - Hidden for Tamu */}
+            {loginRole !== 'tamu' && (
+              <div className="animate-fade-in-up">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="text-gray-400" size={18} />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    className="pl-10 block w-full border-gray-300 rounded-lg border p-2.5 focus:ring-red-500 focus:border-red-500 transition-colors"
+                    placeholder="••••••••"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({...loginForm, password: e.target.value})}
+                  />
+                </div>
+              </div>
+            )}
+
+            {loginError && (
+              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg flex items-center gap-2 animate-pulse">
+                <X size={16} /> {loginError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-bold py-3 rounded-lg shadow-lg transform transition-all active:scale-95 flex items-center justify-center gap-2"
+            >
+              {loginRole === 'tamu' ? 'Masuk Sebagai Tamu' : 'Masuk Sekarang'} <ArrowRight size={18} />
+            </button>
+          </form>
+          
+          <div className="mt-6 text-center text-xs text-gray-500 font-medium">
+            &copy; 2023 Kantin Digital App by Anzilah Nurcahaya
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- TAMPILAN UTAMA (MENU & BILL) ---
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+      
+      {/* --- Header / Navbar --- */}
+      <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            {/* LOGO KOKI DI NAVBAR */}
+            <ChefLogo className="w-10 h-10 shadow-red-500/20" />
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 leading-none tracking-tight">Kantin Digital</h1>
+              <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+                <span>Halo,</span>
+                <span className="font-bold text-red-600 max-w-[100px] truncate">{loginForm.username}</span>
+                <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide text-gray-600 border border-gray-200">
+                  {loginRole}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleLogout}
+              className="p-2 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-full transition-colors"
+              title="Keluar"
+            >
+              <LogOut size={20} />
+            </button>
+            <button 
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <ShoppingCart size={24} className="text-gray-700" />
+              {totalItems > 0 && !isOrderConfirmed && ( // Sembunyikan notif keranjang setelah konfirmasi
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce shadow-sm">
+                  {totalItems}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* --- Hero Section dengan Background --- */}
+      {!isOrderConfirmed && ( // Sembunyikan hero saat bill muncul
+        <div 
+          className="relative bg-gray-900 text-white py-12 px-4 mb-8 overflow-hidden"
+        >
+          {/* Background Image & Overlay */}
+          <div 
+              className="absolute inset-0 bg-cover bg-center opacity-60" 
+              style={{ backgroundImage: `url(${bgCanteenUrl})` }}
+          ></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-red-900/80 to-black/40"></div>
+
+          <div className="relative max-w-5xl mx-auto z-10">
+            <h2 className="text-3xl md:text-4xl font-bold mb-2 drop-shadow-md">
+              {loginRole === 'admin' ? 'Selamat Datang Admin!' : 'Mau makan apa hari ini?'}
+            </h2>
+            <p className="opacity-100 mb-6 text-lg text-gray-100 max-w-2xl drop-shadow-md font-medium">
+              {loginRole === 'admin' 
+                ? 'Kelola pesanan dan menu kantin dengan mudah dan efisien.' 
+                : 'Nikmati hidangan lezat kantin sekolah, pesan langsung dari tempat dudukmu tanpa antri.'}
+            </p>
+            
+            {/* Search Bar */}
+            <div className="relative max-w-lg">
+              <input 
+                type="text" 
+                placeholder="Cari menu favoritmu..." 
+                className="w-full pl-10 pr-4 py-3.5 rounded-xl text-gray-800 focus:outline-none focus:ring-4 focus:ring-red-500/30 shadow-xl transition-all"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <Search className="absolute left-3 top-4 text-gray-400" size={20} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Main Content: Menu or Order Confirmation --- */}
+      {isOrderConfirmed ? (
+        // --- TAMPILAN BILL ORDER/STRUK ---
+        <div className="max-w-2xl mx-auto px-4 pb-24 animate-fade-in-up">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 md:p-10">
+            <div className="text-center mb-8">
+              <ChefHat size={48} className="mx-auto text-red-600 mb-3" />
+              <h2 className="text-3xl font-extrabold text-gray-900">Pesanan Berhasil!</h2>
+              <p className="text-gray-500 mt-1">Pesanan Anda telah dikonfirmasi. Tunjukkan struk ini di kasir.</p>
+            </div>
+
+            <div className="border-t border-b border-dashed border-gray-300 py-4 mb-6">
+              <div className="flex justify-between text-sm text-gray-700 mb-1">
+                <span>Pelanggan</span>
+                <span className="font-semibold">{loginForm.username} ({loginRole})</span>
+              </div>
+              <div className="flex justify-between text-sm text-gray-700">
+                <span>No. Order</span>
+                <span className="font-semibold">#KD{Date.now().toString().slice(-6)}</span>
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Detail Pesanan</h3>
+            <ul className="space-y-3 mb-6">
+              {cart.map((item) => (
+                <li key={item.id} className="flex justify-between items-center text-gray-700 border-b border-gray-100 pb-2">
+                  <span className="text-sm">
+                    {item.name} <span className="text-red-500 font-medium">({item.quantity}x)</span>
+                  </span>
+                  <span className="font-semibold">{formatRupiah(item.price * item.quantity)}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex justify-between items-center text-2xl font-extrabold text-gray-900">
+                <span>TOTAL BAYAR</span>
+                <span className="text-red-700">{formatRupiah(totalPrice)}</span>
+              </div>
+            </div>
+
+          </div>
+
+          <p className="text-center text-sm text-gray-500 mt-4 font-medium">
+            *Pesanan akan diproses setelah pembayaran di kasir.
+          </p>
+
+          <button
+            onClick={handleNewOrder}
+            className="w-full mt-6 bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors active:scale-95 shadow-lg flex items-center justify-center gap-2"
+          >
+            <ArrowRight size={20} /> Pesan Lagi (Buat Order Baru)
+          </button>
+        </div>
+      ) : (
+        // --- TAMPILAN MENU UTAMA (Original Main) ---
+        <main className="max-w-5xl mx-auto px-4 pb-24">
+          
+          {/* --- Kategori --- */}
+          <div className="flex gap-3 overflow-x-auto pb-4 mb-6 scrollbar-hide">
+            {[
+              { id: 'all', label: 'Semua', icon: <Utensils size={16} /> },
+              { id: 'makanan', label: 'Makanan', icon: <ChefHat size={16} /> },
+              { id: 'minuman', label: 'Minuman', icon: <Coffee size={16} /> },
+            ].map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                // Menambahkan group class untuk hover styling pada ikon
+                className={`group flex items-center gap-2 px-6 py-2.5 rounded-full whitespace-nowrap transition-all font-medium text-sm ${
+                  selectedCategory === cat.id
+                    ? 'bg-red-600 text-white shadow-lg shadow-red-600/20 transform scale-105'
+                    : 'bg-white text-gray-600 border border-gray-200 hover:bg-red-50 hover:border-red-300'
+                }`}
+              >
+                {/* Conditional rendering of icon color based on selection */}
+                {React.cloneElement(cat.icon, { 
+                  className: selectedCategory === cat.id ? 'text-white' : 'text-gray-600 group-hover:text-red-600' 
+                })}
+                <span className="">{cat.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* --- Grid Menu --- */}
+          {filteredItems.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {filteredItems.map((item) => (
+                <div key={item.id} className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
+                  <div className="relative h-44 w-full bg-gray-200 overflow-hidden">
+                    <img 
+                      src={item.image} 
+                      alt={item.name} 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      // Fallback image for menu items
+                      onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/400x400/FF6347/FFFFFF?text=MENU" }}
+                    />
+                    <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1">
+                      {item.category === 'makanan' ? '🍔' : '🥤'}
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 flex flex-col flex-grow">
+                    <h3 className="font-bold text-gray-800 mb-1 line-clamp-1 text-base group-hover:text-red-600 transition-colors">{item.name}</h3>
+                    <p className="text-xs text-gray-500 mb-4 line-clamp-2 leading-relaxed">{item.desc}</p>
+                    
+                    <div className="mt-auto flex items-center justify-between">
+                      <span className="font-bold text-red-600 text-lg">{formatRupiah(item.price)}</span>
+                      <button 
+                        onClick={() => addToCart(item)}
+                        className="bg-red-50 text-red-600 p-2.5 rounded-xl hover:bg-red-600 hover:text-white active:scale-90 transition-all shadow-sm"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-24 text-gray-400 bg-white rounded-2xl border border-dashed border-gray-200">
+              <Utensils size={64} className="mx-auto mb-4 opacity-20" />
+              <p className="text-lg font-medium">Menu tidak ditemukan.</p>
+              <p className="text-sm">Coba cari dengan kata kunci lain.</p>
+            </div>
+          )}
+        </main>
+      )}
+
+      {/* --- Toast Notifikasi --- */}
+      {showSuccessMsg && (
+        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-xl z-50 text-sm flex items-center gap-3 animate-fade-in-up ring-1 ring-white/20">
+           <div className="bg-green-500 rounded-full p-0.5"><ShieldCheck size={14} className="text-white" /></div>
+          <span>Berhasil ditambahkan ke keranjang!</span>
+        </div>
+      )}
+
+      {/* --- Floating Action Button (Mobile) --- */}
+      <div className="fixed bottom-6 right-6 md:hidden z-30">
+        <button 
+          onClick={() => setIsCartOpen(true)}
+          className="bg-gradient-to-br from-red-600 to-red-700 text-white p-4 rounded-full shadow-2xl shadow-red-600/30 flex items-center justify-center relative active:scale-90 transition-transform"
+        >
+          <ShoppingCart size={24} />
+          {totalItems > 0 && !isOrderConfirmed && ( // Sembunyikan notif keranjang setelah konfirmasi
+            <span className="absolute -top-1 -right-1 bg-white text-red-600 text-xs font-extrabold w-6 h-6 flex items-center justify-center rounded-full border-2 border-red-600">
+              {totalItems}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* --- Cart Sidebar / Modal --- */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setIsCartOpen(false)}
+          ></div>
+
+          {/* Sidebar Content */}
+          <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white">
+              <h2 className="text-xl font-bold flex items-center gap-3">
+                <ShoppingCart className="text-red-600" size={24} />
+                Keranjang Pesanan
+              </h2>
+              <button 
+                onClick={() => setIsCartOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-gray-800"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/50">
+              {cart.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-gray-400 space-y-6">
+                  <div className="bg-white p-8 rounded-full shadow-sm border border-gray-100">
+                    <ShoppingCart size={64} className="opacity-30 text-gray-400" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-gray-600">Keranjang Kosong</p>
+                    <p className="text-sm mt-1">Kamu belum memilih menu apapun.</p>
+                  </div>
+                  <button 
+                    onClick={() => setIsCartOpen(false)}
+                    className="text-red-600 font-bold hover:underline hover:text-red-700 transition-colors"
+                  >
+                    Mulai Pesan Sekarang
+                  </button>
+                </div>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.id} className="flex gap-4 bg-white p-3 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                    <img 
+                      src={item.image} 
+                      alt={item.name} 
+                      className="w-20 h-20 rounded-xl object-cover"
+                      onError={(e) => { e.target.onerror = null; e.target.src="https://placehold.co/80x80/FF6347/FFFFFF?text=MENU" }}
+                    />
+                    <div className="flex-1 flex flex-col justify-between py-0.5">
+                      <div>
+                        <h4 className="font-bold text-gray-800 text-sm line-clamp-1">{item.name}</h4>
+                        <p className="text-red-600 font-bold text-sm mt-1">{formatRupiah(item.price)}</p>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-100">
+                          <button 
+                            onClick={() => updateQuantity(item.id, -1)}
+                            className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md shadow-sm transition-all text-gray-600"
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
+                          <button 
+                            onClick={() => updateQuantity(item.id, 1)}
+                            className="w-7 h-7 flex items-center justify-center hover:bg-white rounded-md shadow-sm transition-all text-gray-600"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <button 
+                          onClick={() => removeFromCart(item.id)}
+                          className="text-gray-400 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Footer Cart */}
+            {cart.length > 0 && (
+              // UPDATED: Tombol Checkout
+              <div className="p-5 border-t border-gray-100 bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="text-sm font-medium text-gray-600">Total Pesanan ({totalItems} item)</span>
+                  <span className="text-xl font-bold text-red-700">{formatRupiah(totalPrice)}</span>
+                </div>
+                
+                <button
+                  onClick={handleCheckout}
+                  className="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700 transition-colors active:scale-95 shadow-lg flex items-center justify-center gap-2"
+                >
+                  <ShieldCheck size={20} /> Konfirmasi Pesanan
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
